@@ -1,0 +1,19 @@
+version: v2
+# 'clean', when set to true, deletes the directories, zip files, and/or jar files specified in the `out` field for
+# all plugins before running code generation.
+clean: true
+
+plugins:
+  - local: protoc-gen-go
+    out: gen/go
+  - local: protoc-gen-go-grpc
+    out: gen/go
+
+managed:
+  # 'enabled: true' turns managed mode on, 'enabled: false' ignores all managed mode options.
+  enabled: true # default: false
+  # 'disable' is a list of 'disable' rules managing either file options or field options.
+  # A 'disable' rule must have at least one key set.
+  #disable:
+    # Don't modify any files in buf.build/googleapis/googleapis
+  # - module: buf.build/googleapis/googleapis
