@@ -1,22 +1,37 @@
 #*============================================================================*#
-#*=====*                          Generate GRPC                         *=====*#
+#*=====*                          Helpers  GRPC                         *=====*#
 #*============================================================================*#
-.PHONY:protobuf-gen
 
-protobuf-gen:
-	@protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. \
-	--go-grpc_opt=paths=source_relative internal/adapters/grpc/proto/v1/*.proto
+.PHONY: protobuf-update-proto-files protobuf-clean protobuf-gen-all
+
+protobuf-update-proto-files:
+	@for dir in ./*; do \
+		if [ -d "$$dir" ] && [ "$$dir" != "./proto-files" ]; then \
+			mkdir -p "$$dir/proto"; \
+			cp -r ./proto-files/* "$$dir/proto/"; \
+		fi; \
+	done
+
+protobuf-gen-all:
+	@echo "Generating protobuf files..."
+	@cd proto-files && buf generate || { echo "Error: buf generate failed"; exit 1; }
+	@echo "Copying generated files to subdirectories..."
+	@for dir in ./*; do \
+		if [ -d "$$dir" ] && [ "$$dir" != "./proto-files" ]; then \
+			echo "Processing directory: $$dir"; \
+			mkdir -p "$$dir/proto"; \
+			cp -r ./proto-files/gen "$$dir/proto/" 2>/dev/null || { echo "Warning: Failed to copy files to $$dir/proto/"; }; \
+		fi; \
+	done
+	@echo "Cleaning up temporary files..."
+	@if [ -d "proto-files/gen" ]; then \
+		rm -rf proto-files/gen; \
+	else \
+		echo "No temporary files to clean."; \
+	fi
 
 protobuf-clean:
-	@rm -rf internal/adapters/grpc/proto/v1/*.pb.go
-
-#*============================================================================*#
-#*=====*                          Run Server                            *=====*#
-#*============================================================================*#
-.PHONY:local-serve
-
-local-serve:
-	@go run . serve
+	@rm -rf ./**/proto/gen
 
 #*============================================================================*#
 #*=====*                           Dev Docker                           *=====*#

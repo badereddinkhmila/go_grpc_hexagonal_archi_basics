@@ -1,0 +1,19 @@
+version: "3.8"
+
+volumes:
+  go-cache:
+  user-postgres-volume:
+
+services:
+  user-postgres:
+    container_name: USER_POSTGRESQL
+    image: timescale/timescaledb:2.5.2-pg14-oss
+    profiles: ["side"]
+    ports:
+      - 8014:5432
+    volumes:
+      - user-postgres-volume:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: dev-user
+      POSTGRES_PASSWORD: 4gDokQ*hMT_4d2rZqy!8mUExF24w!FkU
+      POSTGRES_DB: dev-db
