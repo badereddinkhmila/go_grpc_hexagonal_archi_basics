@@ -15,8 +15,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const serviceId = "productMicroserviceId"
-const serviceName = "productMicroservice"
+const serviceId = "product_microservice_id"
+const serviceName = "product_microservice"
 
 func Serve() *cobra.Command {
 	cmd := &cobra.Command{
@@ -56,7 +56,7 @@ func Serve() *cobra.Command {
 		// Start REST server
 		group.Go(func() error {
 			fmt.Println("[Cmd] starting REST server")
-			restSrv := rest.NewRestAdapter(applicationAdapter, config.APP().Port)
+			restSrv := rest.NewRestAdapter(*applicationAdapter, config.APP().Port)
 			if err := restSrv.InitServer(); err != nil {
 				return fmt.Errorf("REST server failed: %v", err)
 			}
@@ -72,11 +72,11 @@ func Serve() *cobra.Command {
 			}
 
 			restRegistration := &consulapi.AgentServiceRegistration{
-				ID:      serviceId,
-				Name:    serviceName,
+				ID:      fmt.Sprintf("%s_%s", serviceId, "rest"),
+				Name:    fmt.Sprintf("%s_%s", serviceName, "rest"),
 				Port:    config.APP().Port,
 				Address: config.APP().Host,
-				Tags:    []string{"products", "categories"},
+				Tags:    []string{"products", "categories", "traefik.enable=true"},
 				Check: &consulapi.AgentServiceCheck{
 					HTTP:          fmt.Sprintf("http://%s:%d/check", config.APP().Host, config.APP().Port),
 					Interval:      "10s",
@@ -84,28 +84,41 @@ func Serve() *cobra.Command {
 					TLSSkipVerify: true,
 					CheckID:       "checkalive",
 				},
+				Meta: map[string]string{
+					fmt.Sprintf("traefik_http_routers_%s_rule", fmt.Sprintf("%s_%s", serviceName, "rest")):                      fmt.Sprintf("Host(`%s.rest.local`)", fmt.Sprintf("%s_%s", serviceName, "rest")),
+					fmt.Sprintf("traefik_http_routers_%s_rule", fmt.Sprintf("%s_%s", serviceName, "rest")):                      fmt.Sprintf("PathPrefix(`/api`) && Host(`%s.rest.local`)", fmt.Sprintf("%s_%s", serviceName, "rest")),
+					fmt.Sprintf("traefik_http_services_%s_loadbalancer_server_port", fmt.Sprintf("%s_%s", serviceName, "rest")): "80",
+				},
 			}
 
 			grpcRegistration := &consulapi.AgentServiceRegistration{
-				ID:      serviceId,
-				Name:    serviceName,
-				Port:    config.APP().Port,
+				ID:      fmt.Sprintf("%s_%s", serviceId, "grpc"),
+				Name:    fmt.Sprintf("%s_%s", serviceName, "grpc"),
+				Port:    config.APP().Port + 100,
 				Address: config.APP().Host,
-				Tags:    []string{"grpc", "products", "categories"},
+				Tags:    []string{"grpc", "products", "categories", "traefik.enable=true"},
 				Check: &consulapi.AgentServiceCheck{
 					TCP:                            fmt.Sprintf("%s:%d", config.APP().Host, config.APP().Port+100),
 					Interval:                       "10s",
 					Timeout:                        "3s",
-					DeregisterCriticalServiceAfter: "5m", // Optional: Automatically deregister after 5 minutes if critical
+					DeregisterCriticalServiceAfter: "5m",
 					CheckID:                        "grpc-tcp-check",
+				},
+				Meta: map[string]string{
+					fmt.Sprintf("traefik_http_routers_%s_rule", fmt.Sprintf("%s_%s", serviceName, "grpc")):                        fmt.Sprintf("Host(`%s.grpc.local`)", fmt.Sprintf("%s_%s", serviceName, "grpc")),
+					fmt.Sprintf("traefik_http_services_%s_loadbalancer_server_scheme", fmt.Sprintf("%s_%s", serviceName, "grpc")): "h2c",
+					fmt.Sprintf("traefik_http_services_%s_loadbalancer_server_port", fmt.Sprintf("%s_%s", serviceName, "grpc")):   "80",
 				},
 			}
 
 			log.Println("[Cmd] Registering REST server with Consul...")
 			if err := client.Agent().ServiceRegister(restRegistration); err != nil {
+				fmt.Printf("failed to register rest service: %v", err)
 				return fmt.Errorf("failed to register rest service: %v", err)
 			}
+			log.Println("[Cmd] Registered REST server with Consul...")
 			if err := client.Agent().ServiceRegister(grpcRegistration); err != nil {
+				fmt.Printf("failed to register grpc service: %v", err)
 				return fmt.Errorf("failed to register grpc service: %v", err)
 			}
 

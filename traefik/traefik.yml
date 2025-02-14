@@ -1,0 +1,30 @@
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  grpc:
+    address: ":50051"
+
+providers:
+  consulCatalog:
+    prefix: traefik
+    refreshInterval: 15s
+    exposedByDefault: false
+    defaultRule: "Host(`{{ .Name }}.local`)"
+    connectAware: true
+    endpoint:
+      address: "http://consul-mesh:8500"
+
+#     acme:
+#       email: your-email@example.com
+#       storage: acme.json
+#       httpChallenge:
+#         entryPoint: web
+
+metrics:
+  prometheus: {}

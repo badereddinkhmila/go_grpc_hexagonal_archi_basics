@@ -34,28 +34,37 @@ func (ra *RestAdapter) InitServer() error {
 		return c.SendStatus(200)
 	})
 
+	// Rest Client Handlers
+	rh := NewRestHandler(ra.api)
+
+	// Initialize main route
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 	v1.Get("/products", func(c *fiber.Ctx) error {
 		ctx := context.Background()
-		products, err := ra.rest.GetProducts(ctx)
+		products, err := ra.api.GetProducts(ctx)
 		if err != nil {
 			log.Fatalf("[Get Products Route]: %v", err)
 			return err
 		}
 		return c.JSON(products)
 	})
+
+	v1.Post("/products", rh.CreateProduct)
+
 	v1.Get("/categories", func(c *fiber.Ctx) error {
 		ctx := context.Background()
-		categories, err := ra.rest.GetCategories(ctx)
+		categories, err := ra.api.GetCategories(ctx)
 		if err != nil {
 			log.Fatalf("[Get Categories Route]: %v", err)
 			return err
 		}
 		return c.JSON(categories)
 	})
+
 	app.Get("*", func(c *fiber.Ctx) error {
 		return c.JSON(http.StatusNotFound)
 	})
+
 	return app.Listen(fmt.Sprintf(":%d", ra.port))
 }

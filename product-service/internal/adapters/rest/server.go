@@ -1,14 +1,14 @@
 package rest
 
 import (
-	"product-service/internal/ports"
+	"product-service/internal/application/core/api"
 )
 
 type RestAdapter struct {
-	rest ports.RestPort
+	api  api.Application
 	port int
 }
 
-func NewRestAdapter(rest ports.RestPort, port int) *RestAdapter {
-	return &RestAdapter{rest: rest, port: port}
+func NewRestAdapter(api api.Application, port int) *RestAdapter {
+	return &RestAdapter{api: api, port: port}
 }
